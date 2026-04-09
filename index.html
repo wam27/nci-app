@@ -6,85 +6,91 @@
   <title>NCI Bird Conservation Dashboard</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
       background: #0d1b2a;
-      color: #e0e0e0;
-      min-height: 100vh;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    /* Loading screen */
+    #loading {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: #0d1b2a;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      z-index: 999;
     }
-    .container {
-      text-align: center;
-      padding: 40px;
-      max-width: 600px;
-    }
-    .logo {
-      font-size: 48px;
-      margin-bottom: 20px;
-    }
-    h1 {
-      color: #4fc3f7;
-      font-size: 28px;
-      margin-bottom: 10px;
-    }
-    p {
-      color: #a0b4c8;
-      font-size: 16px;
-      margin-bottom: 30px;
-      line-height: 1.6;
-    }
-    .btn {
-      display: inline-block;
-      background: #4fc3f7;
-      color: #0d1b2a;
-      padding: 16px 40px;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: 700;
-      font-size: 18px;
-      transition: background 0.3s;
-    }
-    .btn:hover { background: #81d4fa; }
-    .note {
-      margin-top: 30px;
-      font-size: 12px;
-      color: #4a6fa5;
-    }
+    .logo { font-size: 56px; margin-bottom: 20px; }
+    h1 { color: #4fc3f7; font-size: 24px; margin-bottom: 10px; }
+    p  { color: #a0b4c8; font-size: 14px; margin-bottom: 30px; }
     .spinner {
-      margin: 20px auto;
-      width: 40px;
-      height: 40px;
+      width: 40px; height: 40px;
       border: 4px solid #1a4a7a;
       border-top: 4px solid #4fc3f7;
       border-radius: 50%;
       animation: spin 1s linear infinite;
+      margin-bottom: 20px;
     }
     @keyframes spin {
-      0% { transform: rotate(0deg); }
+      0%   { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+    .status {
+      color: #4a6fa5;
+      font-size: 12px;
+    }
+
+    /* App iframe — fills entire window */
+    #app-frame {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      border: none;
+      display: none;
+    }
   </style>
-  <meta http-equiv="refresh" content="3;url=https://coated-tackle-webmasters-ultimate.trycloudflare.com/nci-app">
 </head>
 <body>
-  <div class="container">
+
+  <!-- Loading screen shown while iframe loads -->
+  <div id="loading">
     <div class="logo">🦜</div>
     <h1>NCI Bird Conservation Dashboard</h1>
-    <p>
-      Biodiversity assessment for Nature and Culture International
-      conservation areas across Latin America.
-    </p>
+    <p>Biodiversity assessment across Latin America</p>
     <div class="spinner"></div>
-    <p>Connecting to dashboard...</p>
-    <a class="btn" href="https://coated-tackle-webmasters-ultimate.trycloudflare.com/nci-app">
-      Open Dashboard →
-    </a>
-    <p class="note">
-      If the dashboard doesn't load, it may be starting up.<br>
-      Please wait 30 seconds and try again.
-    </p>
+    <p class="status" id="status-text">Connecting to dashboard...</p>
   </div>
+
+  <!-- App loads here — URL stays as github.io -->
+  <iframe
+    id="app-frame"
+    src="https://coated-tackle-webmasters-ultimate.trycloudflare.com/nci-app/"
+    onload="showApp()"
+    onerror="showError()">
+  </iframe>
+
+  <script>
+    function showApp() {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('app-frame').style.display = 'block';
+    }
+
+    function showError() {
+      document.getElementById('status-text').textContent =
+        'Dashboard is starting up — please wait 30 seconds and refresh.';
+    }
+
+    // Timeout fallback — show app after 30s regardless
+    setTimeout(function() {
+      showApp();
+    }, 30000);
+  </script>
+
 </body>
 </html>
