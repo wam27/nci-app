@@ -6,8 +6,14 @@
   <title>NCI Bird Conservation Dashboard</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #0d1b2a; overflow: hidden; }
 
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #0d1b2a;
+      overflow: hidden;
+    }
+
+    /* ── Loading Screen ───────────────────────────────────── */
     #loading {
       position: fixed;
       top: 0; left: 0;
@@ -18,54 +24,269 @@
       align-items: center;
       justify-content: center;
       z-index: 999;
+      transition: opacity 0.8s ease;
     }
-    .logo  { font-size: 56px; margin-bottom: 20px; }
-    h1     { color: #4fc3f7; font-size: 24px; margin-bottom: 10px; }
-    p      { color: #a0b4c8; font-size: 14px; margin-bottom: 30px; }
+
+    .logo {
+      font-size: 64px;
+      margin-bottom: 20px;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%   { transform: translateY(0px); }
+      50%  { transform: translateY(-10px); }
+      100% { transform: translateY(0px); }
+    }
+
+    h1 {
+      color: #4fc3f7;
+      font-size: 26px;
+      margin-bottom: 6px;
+      text-align: center;
+    }
+
+    .subtitle {
+      color: #a0b4c8;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 35px;
+      text-align: center;
+    }
+
+    /* ── Progress Bar ─────────────────────────────────────── */
+    .progress-container {
+      width: 280px;
+      height: 3px;
+      background: #1a4a7a;
+      border-radius: 3px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #4fc3f7, #0288d1);
+      border-radius: 3px;
+      transition: width 1s ease;
+    }
+
+    /* ── Spinner ──────────────────────────────────────────── */
     .spinner {
-      width: 40px; height: 40px;
-      border: 4px solid #1a4a7a;
-      border-top: 4px solid #4fc3f7;
+      width: 44px;
+      height: 44px;
+      border: 3px solid #1a4a7a;
+      border-top: 3px solid #4fc3f7;
       border-radius: 50%;
       animation: spin 1s linear infinite;
       margin-bottom: 20px;
     }
+
     @keyframes spin {
       0%   { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
 
+    /* ── Status Text ──────────────────────────────────────── */
+    .status {
+      color: #4a6fa5;
+      font-size: 13px;
+      height: 20px;
+      transition: opacity 0.5s ease;
+      text-align: center;
+    }
+
+    /* ── Stats Row ────────────────────────────────────────── */
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      margin-top: 40px;
+      padding-top: 30px;
+      border-top: 1px solid #1a4a7a;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-val {
+      color: #4fc3f7;
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .stat-lbl {
+      color: #4a6fa5;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 3px;
+    }
+
+    /* ── Footer ───────────────────────────────────────────── */
+    .footer {
+      position: fixed;
+      bottom: 20px;
+      width: 100%;
+      text-align: center;
+      color: #1a3a5a;
+      font-size: 11px;
+    }
+
+    /* ── App iframe ───────────────────────────────────────── */
     #app-frame {
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
       border: none;
       display: none;
+      opacity: 0;
+      transition: opacity 0.8s ease;
+    }
+
+    #app-frame.visible {
+      opacity: 1;
     }
   </style>
 </head>
 <body>
 
+  <!-- ── Loading Screen ──────────────────────────────────── -->
   <div id="loading">
+
     <div class="logo">🦜</div>
     <h1>NCI Bird Conservation Dashboard</h1>
-    <p>Biodiversity assessment across Latin America</p>
+    <p class="subtitle">Nature and Culture International</p>
+
     <div class="spinner"></div>
-    <p>Connecting to dashboard...</p>
+
+    <div class="progress-container">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+
+    <p class="status" id="status-text">Connecting to server...</p>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-val">3,473</div>
+        <div class="stat-lbl">Bird species</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val">5</div>
+        <div class="stat-lbl">Countries</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val">185</div>
+        <div class="stat-lbl">Protected areas</div>
+      </div>
+    </div>
+
   </div>
 
+  <!-- ── Footer ─────────────────────────────────────────── -->
+  <div class="footer" id="footer">
+    Nature and Culture International · Biodiversity Assessment · 2026
+  </div>
+
+  <!-- ── App iframe ─────────────────────────────────────── -->
   <iframe
     id="app-frame"
-    src="https://integrated-version-ace-article.trycloudflare.com/nci-app"
-    onload="showApp()">
+    src="TUNNEL_URL/nci-app"
+    onload="onIframeLoad()">
   </iframe>
 
   <script>
-    function showApp() {
-      document.getElementById('loading').style.display = 'none';
-      document.getElementById('app-frame').style.display = 'block';
+    // ── Configuration ────────────────────────────────────
+    // UPDATE THIS after every NAS reboot:
+    var tunnelUrl = "TUNNEL_URL";
+
+    // Minimum time to show loading screen (milliseconds)
+    // Set to match your app startup time (~20 seconds)
+    var minLoadTime = 20000;
+
+    // ── State tracking ────────────────────────────────────
+    var iframeLoaded = false;
+    var timerDone    = false;
+    var elapsed      = 0;
+
+    // ── Status messages ───────────────────────────────────
+    var messages = [
+      { time: 0,     text: "Connecting to server..."        },
+      { time: 3000,  text: "Loading biodiversity data..."   },
+      { time: 7000,  text: "Preparing spatial layers..."    },
+      { time: 11000, text: "Computing species statistics..."  },
+      { time: 15000, text: "Building maps and charts..."    },
+      { time: 18000, text: "Almost ready..."                }
+    ];
+
+    // ── Progress bar ──────────────────────────────────────
+    var progressBar = document.getElementById('progress-bar');
+    var statusText  = document.getElementById('status-text');
+
+    messages.forEach(function(msg) {
+      setTimeout(function() {
+        statusText.style.opacity = '0';
+        setTimeout(function() {
+          statusText.textContent  = msg.text;
+          statusText.style.opacity = '1';
+        }, 250);
+      }, msg.time);
+    });
+
+    // Animate progress bar over minLoadTime
+    var progressInterval = setInterval(function() {
+      elapsed += 200;
+      var pct = Math.min((elapsed / minLoadTime) * 95, 95);
+      progressBar.style.width = pct + '%';
+      if (elapsed >= minLoadTime) clearInterval(progressInterval);
+    }, 200);
+
+    // ── Show app when both conditions met ─────────────────
+    function tryShowApp() {
+      if (iframeLoaded && timerDone) {
+        // Complete progress bar
+        progressBar.style.width = '100%';
+        setTimeout(function() {
+          // Fade out loading screen
+          document.getElementById('loading').style.opacity = '0';
+          document.getElementById('footer').style.display  = 'none';
+          setTimeout(function() {
+            document.getElementById('loading').style.display = 'none';
+            var frame = document.getElementById('app-frame');
+            frame.style.display = 'block';
+            setTimeout(function() {
+              frame.classList.add('visible');
+            }, 50);
+          }, 800);
+        }, 300);
+      }
     }
-    setTimeout(showApp, 30000);
+
+    // Called when iframe HTML loads
+    function onIframeLoad() {
+      iframeLoaded = true;
+      tryShowApp();
+    }
+
+    // Minimum display timer
+    setTimeout(function() {
+      timerDone = true;
+      tryShowApp();
+    }, minLoadTime);
+
+    // Ultimate fallback — show after 45 seconds no matter what
+    setTimeout(function() {
+      iframeLoaded = true;
+      timerDone    = true;
+      statusText.textContent = 'Loading complete.';
+      tryShowApp();
+    }, 45000);
+
+    // Set iframe src with tunnel URL
+    document.getElementById('app-frame').src = tunnelUrl + '/nci-app';
   </script>
 
 </body>
