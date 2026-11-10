@@ -159,38 +159,55 @@
     var tunnelUrl = "https://belfast-dark-liable-price.trycloudflare.com";
     // ════════════════════════════════════════════════════
 
-    // Minimum loading screen time — matches full app startup (~2 min)
-    var minLoadTime = 120000;
+    // Cold-start timer (first load after NAS restart) — ~70s
+    var COLD_TIMER = 70000;
+    // Warm timer (app already running in memory) — just a brief flash
+    var WARM_TIMER = 4000;
 
-    // ── State tracking ────────────────────────────────────
+    // Threshold: if iframe responds in under 8s, the R session was already warm
+    var WARM_THRESHOLD = 8000;
+
+    var minLoadTime  = COLD_TIMER; // may be shortened below after iframe responds
     var iframeLoaded = false;
     var timerDone    = false;
     var elapsed      = 0;
+    var loadStart    = Date.now();
+    var mainTimer    = null;
 
-    // ── Status messages timed to real startup steps ───────
-    var messages = [
-      { time: 0,       text: "Connecting to server..."              },
-      { time: 10000,   text: "Loading bird species data..."         },
-      { time: 30000,   text: "Preparing spatial layers..."          },
-      { time: 55000,   text: "Loading mammal pipeline..."           },
-      { time: 85000,   text: "Loading reptiles and amphibians..."   },
-      { time: 105000,  text: "Building maps and charts..."          },
-      { time: 115000,  text: "Almost ready..."                      }
+    // ── Status messages timed to cold-start steps ────────
+    var coldMessages = [
+      { time: 0,      text: "Connecting to server..."            },
+      { time: 10000,  text: "Loading bird species data..."       },
+      { time: 30000,  text: "Preparing spatial layers..."        },
+      { time: 50000,  text: "Loading mammal pipeline..."         },
+      { time: 60000,  text: "Loading reptiles and amphibians..." },
+      { time: 65000,  text: "Almost ready..."                    }
+    ];
+
+    var warmMessages = [
+      { time: 0,    text: "Connecting to server..." },
+      { time: 1500, text: "Loading dashboard..."    },
+      { time: 3000, text: "Almost ready..."         }
     ];
 
     // ── Progress bar and status messages ─────────────────
     var progressBar = document.getElementById('progress-bar');
     var statusText  = document.getElementById('status-text');
 
-    messages.forEach(function(msg) {
-      setTimeout(function() {
-        statusText.style.opacity = '0';
+    function scheduleMessages(msgs) {
+      msgs.forEach(function(msg) {
         setTimeout(function() {
-          statusText.textContent   = msg.text;
-          statusText.style.opacity = '1';
-        }, 250);
-      }, msg.time);
-    });
+          statusText.style.opacity = '0';
+          setTimeout(function() {
+            statusText.textContent   = msg.text;
+            statusText.style.opacity = '1';
+          }, 250);
+        }, msg.time);
+      });
+    }
+
+    // Start with cold-start messages (will be overridden if warm detected)
+    scheduleMessages(coldMessages);
 
     var progressInterval = setInterval(function() {
       elapsed += 200;
@@ -210,25 +227,48 @@
             document.getElementById('loading').style.display = 'none';
             var frame = document.getElementById('app-frame');
             frame.style.display = 'block';
-            setTimeout(function() {
-              frame.classList.add('visible');
-            }, 50);
+            setTimeout(function() { frame.classList.add('visible'); }, 50);
           }, 800);
         }, 300);
       }
     }
 
+    // Start the main timer
+    function startTimer(ms) {
+      minLoadTime = ms;
+      elapsed = 0; // reset progress bar base
+      mainTimer = setTimeout(function() {
+        timerDone = true;
+        tryShowApp();
+      }, ms);
+    }
+    startTimer(COLD_TIMER);
+
     // Called when iframe HTML shell finishes loading
     function onIframeLoad() {
       iframeLoaded = true;
+      var responseTime = Date.now() - loadStart;
+
+      // If the server responded quickly → app was already warm in memory
+      if (responseTime < WARM_THRESHOLD && !timerDone) {
+        // Cancel the cold-start timer and use a short warm timer instead
+        clearTimeout(mainTimer);
+        clearInterval(progressInterval);
+        elapsed = 0;
+        scheduleMessages(warmMessages);
+        progressBar.style.width = '0%';
+        startTimer(WARM_TIMER);
+        // Reset progress bar for the short warm sequence
+        progressInterval = setInterval(function() {
+          elapsed += 200;
+          var pct = Math.min((elapsed / WARM_TIMER) * 95, 95);
+          progressBar.style.width = pct + '%';
+          if (elapsed >= WARM_TIMER) clearInterval(progressInterval);
+        }, 200);
+      }
+
       tryShowApp();
     }
-
-    // Minimum display timer
-    setTimeout(function() {
-      timerDone = true;
-      tryShowApp();
-    }, minLoadTime);
 
     // Ultimate fallback — show after 5 minutes no matter what
     setTimeout(function() {
