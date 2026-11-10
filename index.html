@@ -155,8 +155,12 @@
 
   <script>
     // ════════════════════════════════════════════════════
-    // UPDATE THIS after every NAS reboot:
-    var tunnelUrl = "https://belfast-dark-liable-price.trycloudflare.com";
+    // The current address is now fetched automatically from the "nci-url"
+    // Worker (the NAS publishes it there every 5 minutes).
+    // The line below is only the BACKUP, used if the Worker does not answer.
+    // You no longer need to edit it after every reboot.
+    var tunnelUrl = "https://garcia-extraordinary-council-whale.trycloudflare.com";
+    var WORKER_URL = "https://nci-url.wildersonmedinabaron.workers.dev";
     // ════════════════════════════════════════════════════
 
     // Cold-start timer (first load after NAS restart) — ~70s
@@ -278,8 +282,36 @@
       tryShowApp();
     }, 300000);
 
-    // Set iframe src HERE — only once, avoids double-load bug
-    document.getElementById('app-frame').src = tunnelUrl + '/nci-app';
+    // Set iframe src HERE — only once, avoids double-load bug.
+    // First ask the Worker for the current tunnel address (max 4 seconds).
+    // Only real quick-tunnel addresses are accepted; anything else, or any
+    // failure, falls back to the backup address typed above.
+    function setIframeSrc(base) {
+      loadStart = Date.now();   // measure the app's response time from now
+      document.getElementById('app-frame').src = base.replace(/\/$/, '') + '/nci-app';
+    }
+
+    (function () {
+      var done = false;
+      function go(base) { if (done) return; done = true; setIframeSrc(base); }
+
+      var timeout = setTimeout(function () { go(tunnelUrl); }, 4000);
+
+      try {
+        fetch(WORKER_URL, { cache: 'no-store' })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (d) {
+            clearTimeout(timeout);
+            var ok = d && typeof d.url === 'string' &&
+                     /^https:\/\/[a-z0-9-]+\.trycloudflare\.com\/?$/.test(d.url);
+            go(ok ? d.url : tunnelUrl);
+          })
+          .catch(function () { clearTimeout(timeout); go(tunnelUrl); });
+      } catch (e) {
+        clearTimeout(timeout);
+        go(tunnelUrl);
+      }
+    })();
   </script>
 
 </body>
