@@ -67,7 +67,7 @@
   // (publish_tunnel_url.sh) sends the current address to a small Cloudflare Worker ("nci-url");
   // this page asks the Worker for it. PASTE THE WORKER ADDRESS HERE: copy it from the
   // fetch("https://....workers.dev") line of the index.html that is online now.
-  var WORKER_URL = "PASTE_THE_WORKER_ADDRESS_HERE";
+  var WORKER_URL = "https://nci-url.wildersonmedinabaron.workers.dev";
   // Only used if the Worker cannot be reached (then edit it by hand after a NAS reboot):
   var tunnelUrl  = "https://brass-alarm-barely-nathan.trycloudflare.com";
   var appPath        = "/nci-app/";   // folder the Shiny app is served from inside the container
