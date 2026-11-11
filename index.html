@@ -1,318 +1,159 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NCI Biodiversity Dashboard</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Integrated Spatial Biodiversity Tool</title>
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+<style>
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f5f7fa; color: #1c2b39;
+    overflow: hidden;
+  }
 
-    body {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      background: #0d1b2a;
-      overflow: hidden;
-    }
+  /* ── Loading screen ─────────────────────────────────────────────── */
+  #loader {
+    position: fixed; inset: 0; z-index: 10;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 24px; text-align: center; background: #f5f7fa;
+    transition: opacity .6s ease;
+  }
+  #loader.hide { opacity: 0; pointer-events: none; }
+  #logo  { width: min(240px, 60vw); height: auto; margin-bottom: 26px; }
+  h1     { margin: 0 0 6px; font-size: clamp(22px, 4.2vw, 32px); font-weight: 700; color: #1c2b39; letter-spacing: .3px; }
+  .sub   { margin: 0 0 30px; font-size: 14px; color: #5c6b7a; }
 
-    /* ── Loading Screen ───────────────────────────────────── */
-    #loading {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: #0d1b2a;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 999;
-      transition: opacity 0.8s ease;
-    }
+  /* progress bar (the only loading indicator: the spinning wheel was removed) */
+  .bar   { width: min(420px, 80vw); height: 8px; background: #dde3ea; border-radius: 6px; overflow: hidden; }
+  #fill  { width: 0%; height: 100%; background: #1976d2; border-radius: 6px; transition: width .4s linear; }
+  #msg   { margin-top: 14px; min-height: 20px; font-size: 13px; color: #5c6b7a; }
+  #retry { display: none; margin-top: 14px; font-size: 13px; }
+  #retry a { color: #1976d2; }
+  .foot  { position: absolute; bottom: 16px; left: 0; right: 0; font-size: 11px; color: #9aa7b4; }
 
-    .logo {
-      font-size: 64px;
-      margin-bottom: 20px;
-      animation: float 3s ease-in-out infinite;
-    }
+  /* ── App frame ───────────────────────────────────────────────────── */
+  #app { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; visibility: hidden; }
+  #app.show { visibility: visible; }
 
-    @keyframes float {
-      0%   { transform: translateY(0px); }
-      50%  { transform: translateY(-10px); }
-      100% { transform: translateY(0px); }
-    }
-
-    h1 {
-      color: #4fc3f7;
-      font-size: 26px;
-      margin-bottom: 6px;
-      text-align: center;
-    }
-
-    .subtitle {
-      color: #a0b4c8;
-      font-size: 13px;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      margin-bottom: 35px;
-      text-align: center;
-    }
-
-    /* ── Progress Bar ─────────────────────────────────────── */
-    .progress-container {
-      width: 280px;
-      height: 3px;
-      background: #1a4a7a;
-      border-radius: 3px;
-      margin-bottom: 16px;
-      overflow: hidden;
-    }
-
-    .progress-bar {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(90deg, #4fc3f7, #0288d1);
-      border-radius: 3px;
-      transition: width 1s ease;
-    }
-
-    /* ── Spinner ──────────────────────────────────────────── */
-    .spinner {
-      width: 44px;
-      height: 44px;
-      border: 3px solid #1a4a7a;
-      border-top: 3px solid #4fc3f7;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-bottom: 20px;
-    }
-
-    @keyframes spin {
-      0%   { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    /* ── Status Text ──────────────────────────────────────── */
-    .status {
-      color: #4a6fa5;
-      font-size: 13px;
-      height: 20px;
-      transition: opacity 0.5s ease;
-      text-align: center;
-    }
-
-    /* ── Footer ───────────────────────────────────────────── */
-    .footer {
-      position: fixed;
-      bottom: 20px;
-      width: 100%;
-      text-align: center;
-      color: #1a3a5a;
-      font-size: 11px;
-    }
-
-    /* ── App iframe ───────────────────────────────────────── */
-    #app-frame {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      border: none;
-      display: none;
-      opacity: 0;
-      transition: opacity 0.8s ease;
-    }
-
-    #app-frame.visible {
-      opacity: 1;
-    }
-  </style>
+  @media (prefers-reduced-motion: reduce) {
+    #loader, #fill { transition: none; }
+  }
+</style>
 </head>
 <body>
 
-  <!-- ── Loading Screen ──────────────────────────────────── -->
-  <div id="loading">
-    <div class="logo">🦜</div>
-    <h1>NCI Biodiversity Dashboard</h1>
-    <p class="subtitle">Nature and Culture International</p>
+<div id="loader">
+  <img id="logo" src="logo.svg" alt="Nature and Culture International">
+  <h1>Integrated Spatial Biodiversity Tool</h1>
+  <p class="sub">Nature and Culture International</p>
 
-    <div class="spinner"></div>
-
-    <div class="progress-container">
-      <div class="progress-bar" id="progress-bar"></div>
-    </div>
-
-    <p class="status" id="status-text">Connecting to server...</p>
-
+  <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="bar">
+    <div id="fill"></div>
   </div>
+  <div id="msg" aria-live="polite">Connecting to server...</div>
+  <div id="retry">This is taking longer than usual. <a href="" onclick="location.reload(); return false;">Try again</a></div>
 
-  <!-- ── Footer ─────────────────────────────────────────── -->
-  <div class="footer" id="footer">
-    Nature and Culture International · Biodiversity Assessment · 2026
-  </div>
+  <div class="foot">Nature and Culture International &middot; Biodiversity Assessment &middot; 2026</div>
+</div>
 
-  <!-- ── App iframe — NO src here, set by JS only ───────── -->
-  <iframe
-    id="app-frame"
-    onload="onIframeLoad()">
-  </iframe>
+<!-- No src here on purpose: the script below sets it ONCE (avoids loading the app twice). -->
+<iframe id="app" title="Integrated Spatial Biodiversity Tool" allow="fullscreen"></iframe>
 
-  <script>
-    // ════════════════════════════════════════════════════
-    // The current address is now fetched automatically from the "nci-url"
-    // Worker (the NAS publishes it there every 5 minutes).
-    // The line below is only the BACKUP, used if the Worker does not answer.
-    // You no longer need to edit it after every reboot.
-    var tunnelUrl = "https://garcia-extraordinary-council-whale.trycloudflare.com";
-    var WORKER_URL = "https://nci-url.wildersonmedinabaron.workers.dev";
-    // ════════════════════════════════════════════════════
+<script>
+  // ───────────── SETTINGS ─────────────
+  // The Cloudflare quick-tunnel address changes every time the NAS reboots. The NAS script
+  // (publish_tunnel_url.sh) sends the current address to a small Cloudflare Worker ("nci-url");
+  // this page asks the Worker for it. PASTE THE WORKER ADDRESS HERE: copy it from the
+  // fetch("https://....workers.dev") line of the index.html that is online now.
+  var WORKER_URL = "PASTE_THE_WORKER_ADDRESS_HERE";
+  // Only used if the Worker cannot be reached (then edit it by hand after a NAS reboot):
+  var tunnelUrl  = "https://brass-alarm-barely-nathan.trycloudflare.com";
+  var appPath        = "/nci-app/";   // folder the Shiny app is served from inside the container
+  var COLD_TIMER     = 70000;         // cold start: full animated sequence (ms)
+  var WARM_TIMER     = 4000;          // warm app: short screen (ms)
+  var WARM_THRESHOLD = 8000;          // iframe answered in less than this = warm app
+  var FALLBACK_TIMER = 300000;        // 5 min: show the app / retry link no matter what
 
-    // Cold-start timer (first load after NAS restart) — ~70s
-    var COLD_TIMER = 70000;
-    // Warm timer (app already running in memory) — just a brief flash
-    var WARM_TIMER = 4000;
+  // Messages shown under the bar (percent where each one starts).
+  var STEPS = [
+    [0,  "Connecting to server..."],
+    [15, "Starting the analysis engine..."],
+    [35, "Loading protected-area boundaries..."],
+    [60, "Loading species ranges and occurrence records..."],
+    [85, "Almost ready..."]
+  ];
 
-    // Threshold: if iframe responds in under 8s, the R session was already warm
-    var WARM_THRESHOLD = 8000;
+  // ───────────── LOGIC ─────────────
+  var loader = document.getElementById("loader");
+  var fill   = document.getElementById("fill");
+  var bar    = document.getElementById("bar");
+  var msg    = document.getElementById("msg");
+  var retry  = document.getElementById("retry");
+  var frame  = document.getElementById("app");
 
-    var minLoadTime  = COLD_TIMER; // may be shortened below after iframe responds
-    var iframeLoaded = false;
-    var timerDone    = false;
-    var elapsed      = 0;
-    var loadStart    = Date.now();
-    var mainTimer    = null;
+  var t0 = Date.now(), mode = "cold", frameLoaded = false, appReady = false, finished = false;
+  var endStart = null;   // {time, pct, ms}: set when the app says it is ready
 
-    // ── Status messages timed to cold-start steps ────────
-    var coldMessages = [
-      { time: 0,      text: "Connecting to server..."            },
-      { time: 10000,  text: "Loading bird species data..."       },
-      { time: 30000,  text: "Preparing spatial layers..."        },
-      { time: 50000,  text: "Loading mammal pipeline..."         },
-      { time: 60000,  text: "Loading reptiles and amphibians..." },
-      { time: 65000,  text: "Almost ready..."                    }
-    ];
-
-    var warmMessages = [
-      { time: 0,    text: "Connecting to server..." },
-      { time: 1500, text: "Loading dashboard..."    },
-      { time: 3000, text: "Almost ready..."         }
-    ];
-
-    // ── Progress bar and status messages ─────────────────
-    var progressBar = document.getElementById('progress-bar');
-    var statusText  = document.getElementById('status-text');
-
-    function scheduleMessages(msgs) {
-      msgs.forEach(function(msg) {
-        setTimeout(function() {
-          statusText.style.opacity = '0';
-          setTimeout(function() {
-            statusText.textContent   = msg.text;
-            statusText.style.opacity = '1';
-          }, 250);
-        }, msg.time);
-      });
+  function setPct(p) {
+    p = Math.max(0, Math.min(100, p));
+    fill.style.width = p + "%";
+    bar.setAttribute("aria-valuenow", Math.round(p));
+    for (var i = STEPS.length - 1; i >= 0; i--) {
+      if (p >= STEPS[i][0]) { msg.textContent = STEPS[i][1]; break; }
     }
+  }
 
-    // Start with cold-start messages (will be overridden if warm detected)
-    scheduleMessages(coldMessages);
+  function reveal() {
+    if (finished) return;
+    finished = true;
+    setPct(100);
+    frame.classList.add("show");
+    loader.classList.add("hide");
+    setTimeout(function () { loader.style.display = "none"; }, 700);
+  }
 
-    var progressInterval = setInterval(function() {
-      elapsed += 200;
-      var pct = Math.min((elapsed / minLoadTime) * 95, 95);
-      progressBar.style.width = pct + '%';
-      if (elapsed >= minLoadTime) clearInterval(progressInterval);
-    }, 200);
+  function tick() {
+    if (finished) return;
+    var now = Date.now(), elapsed = now - t0, pct;
 
-    // ── Show app when BOTH timer AND iframe are ready ─────
-    function tryShowApp() {
-      if (iframeLoaded && timerDone) {
-        progressBar.style.width = '100%';
-        setTimeout(function() {
-          document.getElementById('loading').style.opacity = '0';
-          document.getElementById('footer').style.display  = 'none';
-          setTimeout(function() {
-            document.getElementById('loading').style.display = 'none';
-            var frame = document.getElementById('app-frame');
-            frame.style.display = 'block';
-            setTimeout(function() { frame.classList.add('visible'); }, 50);
-          }, 800);
-        }, 300);
-      }
+    if (endStart) {                                   // app is ready: run the bar to 100%
+      pct = endStart.pct + (100 - endStart.pct) * Math.min(1, (now - endStart.time) / endStart.ms);
+      setPct(pct);
+      if (pct >= 100) { reveal(); return; }
+    } else {                                          // still waiting: bar creeps towards 95%
+      setPct(Math.min(95, elapsed / COLD_TIMER * 95));
+      // Safety nets (app without the ready signal, or very slow start)
+      if (frameLoaded && elapsed >= COLD_TIMER) { reveal(); return; }
+      if (elapsed >= FALLBACK_TIMER) { retry.style.display = "block"; reveal(); return; }
     }
+    requestAnimationFrame(tick);
+  }
 
-    // Start the main timer
-    function startTimer(ms) {
-      minLoadTime = ms;
-      elapsed = 0; // reset progress bar base
-      mainTimer = setTimeout(function() {
-        timerDone = true;
-        tryShowApp();
-      }, ms);
-    }
-    startTimer(COLD_TIMER);
+  // The app sends a "ready" message to this page as soon as it is connected
+  // (small script in app.R). This is what tells a warm app from a cold start.
+  window.addEventListener("message", function (ev) {
+    if (ev.source !== frame.contentWindow || !ev.data || ev.data.biowatch !== "ready" || endStart) return;
+    var elapsed = Date.now() - t0;
+    var warm = elapsed < WARM_THRESHOLD;
+    var cur = Math.min(95, elapsed / COLD_TIMER * 95);
+    endStart = { time: Date.now(), pct: warm ? 0 : cur, ms: warm ? WARM_TIMER : 1500 };
+  });
 
-    // Called when iframe HTML shell finishes loading
-    function onIframeLoad() {
-      iframeLoaded = true;
-      var responseTime = Date.now() - loadStart;
+  frame.addEventListener("load", function () { frameLoaded = true; });
 
-      // If the server responded quickly → app was already warm in memory
-      if (responseTime < WARM_THRESHOLD && !timerDone) {
-        // Cancel the cold-start timer and use a short warm timer instead
-        clearTimeout(mainTimer);
-        clearInterval(progressInterval);
-        elapsed = 0;
-        scheduleMessages(warmMessages);
-        progressBar.style.width = '0%';
-        startTimer(WARM_TIMER);
-        // Reset progress bar for the short warm sequence
-        progressInterval = setInterval(function() {
-          elapsed += 200;
-          var pct = Math.min((elapsed / WARM_TIMER) * 95, 95);
-          progressBar.style.width = pct + '%';
-          if (elapsed >= WARM_TIMER) clearInterval(progressInterval);
-        }, 200);
-      }
+  function openApp(base) { frame.src = base.replace(/\/$/, "") + appPath; }   // set once
 
-      tryShowApp();
-    }
-
-    // Ultimate fallback — show after 5 minutes no matter what
-    setTimeout(function() {
-      iframeLoaded = true;
-      timerDone    = true;
-      statusText.textContent = 'Loading complete.';
-      tryShowApp();
-    }, 300000);
-
-    // Set iframe src HERE — only once, avoids double-load bug.
-    // First ask the Worker for the current tunnel address (max 4 seconds).
-    // Only real quick-tunnel addresses are accepted; anything else, or any
-    // failure, falls back to the backup address typed above.
-    function setIframeSrc(base) {
-      loadStart = Date.now();   // measure the app's response time from now
-      document.getElementById('app-frame').src = base.replace(/\/$/, '') + '/nci-app';
-    }
-
-    (function () {
-      var done = false;
-      function go(base) { if (done) return; done = true; setIframeSrc(base); }
-
-      var timeout = setTimeout(function () { go(tunnelUrl); }, 4000);
-
-      try {
-        fetch(WORKER_URL, { cache: 'no-store' })
-          .then(function (r) { return r.ok ? r.json() : null; })
-          .then(function (d) {
-            clearTimeout(timeout);
-            var ok = d && typeof d.url === 'string' &&
-                     /^https:\/\/[a-z0-9-]+\.trycloudflare\.com\/?$/.test(d.url);
-            go(ok ? d.url : tunnelUrl);
-          })
-          .catch(function () { clearTimeout(timeout); go(tunnelUrl); });
-      } catch (e) {
-        clearTimeout(timeout);
-        go(tunnelUrl);
-      }
-    })();
-  </script>
-
+  if (WORKER_URL.indexOf("workers.dev") > -1 || WORKER_URL.indexOf("http") === 0) {
+    fetch(WORKER_URL, { cache: "no-store" })
+      .then(function (r) { return r.json(); })
+      .then(function (d) { openApp(d && d.url ? d.url : tunnelUrl); })
+      .catch(function () { openApp(tunnelUrl); });
+  } else {
+    openApp(tunnelUrl);
+  }
+  requestAnimationFrame(tick);
+</script>
 </body>
 </html>
